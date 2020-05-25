@@ -26,6 +26,7 @@ namespace RenderVars {
 	const float FOV = glm::radians(65.f);
 	const float zNear = 1.f;
 	const float zFar = 50.f;
+	bool cameraType = true;
 
 	glm::mat4 _projection;
 	glm::mat4 _modelView;
@@ -35,8 +36,10 @@ namespace RenderVars {
 
 	struct prevMouse {
 		float lastx, lasty;
+
 		MouseEvent::Button button = MouseEvent::Button::None;
 		bool waspressed = false;
+
 	} prevMouse;
 
 	float panv[3] = { 0.f, -5.f, -15.f };
@@ -51,29 +54,33 @@ void GLResize(int width, int height) {
 }
 
 void GLmousecb(MouseEvent ev) {
-	if(RV::prevMouse.waspressed && RV::prevMouse.button == ev.button) {
-		float diffx = ev.posx - RV::prevMouse.lastx;
-		float diffy = ev.posy - RV::prevMouse.lasty;
-		switch(ev.button) {
-		case MouseEvent::Button::Left: // ROTATE
-			RV::rota[0] += diffx * 0.005f;
-			RV::rota[1] += diffy * 0.005f;
-			break;
-		case MouseEvent::Button::Right: // MOVE XY
-			RV::panv[0] += diffx * 0.03f;
-			RV::panv[1] -= diffy * 0.03f;
-			break;
-		case MouseEvent::Button::Middle: // MOVE Z
-			RV::panv[2] += diffy * 0.05f;
-			break;
-		default: break;
+
+	if (RV::cameraType) {
+		if (RV::prevMouse.waspressed && RV::prevMouse.button == ev.button) {
+			float diffx = ev.posx - RV::prevMouse.lastx;
+			float diffy = ev.posy - RV::prevMouse.lasty;
+			switch (ev.button) {
+			case MouseEvent::Button::Left: // ROTATE
+				RV::rota[0] += diffx * 0.005f;
+				RV::rota[1] += diffy * 0.005f;
+				break;
+			case MouseEvent::Button::Right: // MOVE XY
+				RV::panv[0] += diffx * 0.03f;
+				RV::panv[1] -= diffy * 0.03f;
+				break;
+			case MouseEvent::Button::Middle: // MOVE Z
+				RV::panv[2] += diffy * 0.05f;
+				break;
+			default: break;
+			}
 		}
-	} else {
-		RV::prevMouse.button = ev.button;
-		RV::prevMouse.waspressed = true;
+		else {
+			RV::prevMouse.button = ev.button;
+			RV::prevMouse.waspressed = true;
+		}
+		RV::prevMouse.lastx = ev.posx;
+		RV::prevMouse.lasty = ev.posy;
 	}
-	RV::prevMouse.lastx = ev.posx;
-	RV::prevMouse.lasty = ev.posy;
 }
 
 //////////////////////////////////////////////////
@@ -563,10 +570,21 @@ void GLcleanup() {
 void GLrender(float dt) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	RV::_modelView = glm::mat4(1.f);
-	RV::_modelView = glm::translate(RV::_modelView, glm::vec3(RV::panv[0], RV::panv[1], RV::panv[2]));
-	RV::_modelView = glm::rotate(RV::_modelView, RV::rota[1], glm::vec3(1.f, 0.f, 0.f));
-	RV::_modelView = glm::rotate(RV::_modelView, RV::rota[0], glm::vec3(0.f, 1.f, 0.f));
+	if (RV::cameraType) {
+		RV::_modelView = glm::mat4(1.f);
+		RV::_modelView = glm::translate(RV::_modelView, glm::vec3(RV::panv[0], RV::panv[1], RV::panv[2]));
+		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[1], glm::vec3(1.f, 0.f, 0.f));
+		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[0], glm::vec3(0.f, 1.f, 0.f));
+
+
+	}
+	else {
+
+		RV::_modelView = glm::mat4(1.f);
+		RV::_modelView = glm::translate(glm::mat4(1.f), glm::vec3(0, -1.f, -2.f));
+		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[1], glm::vec3(1.f, 0.f, 0.f));
+		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[0], glm::vec3(0.f, 1.f, 0.f));
+	}
 	RV::_MVP = RV::_projection * RV::_modelView;
 
 	glm::mat4 traslacion = glm::mat4(1.f);
@@ -610,6 +628,18 @@ void GUI() {
 
 		/////////////////////////////////////////////////////TODO
 		// Do your GUI code here....
+		if (ImGui::Button("Camera")) //Si se aprieta Close-Up
+		{
+			if (RV::cameraType) {
+				
+				RV::cameraType = false;
+				
+			}
+			else {
+				
+				RV::cameraType = true;
+			}
+		}
 		// ...
 		// ...
 		// ...
