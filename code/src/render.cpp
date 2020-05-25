@@ -548,9 +548,9 @@ public:
 		}
 		return totalZ;
 	}
-	float getYRot() {
+	float getYRot(float t) {
 	
-		return 0;
+		return glm::atan(getX(t) / getZ(t));
 	}
 
 	unsigned long combinatory(int n, int i) {
@@ -630,8 +630,8 @@ void GLrender(float dt) {
 	Cube::drawCube();*/
 
 	//prueba coche con cubo
-
-	if (t <= 1) {
+	//version movimiento
+	/*if (t <= 1) {
 		glm::vec3 movimiento = glm::vec3(car_path.getX(t),0,car_path.getZ(t));
 		traslacion = glm::translate(glm::mat4(1.f), movimiento);
 	}
@@ -641,7 +641,21 @@ void GLrender(float dt) {
 	t += 0.01f;
 	escalado = glm::scale(glm::mat4(1.f), glm::vec3(1, 1, 1));
 	Cube::updateCube(traslacion * rotacion * escalado);
-	Cube::drawCube();
+	Cube::drawCube();*/
+
+	//version cubitos
+	for (float i = 0; i <= 1; i += 0.01f) {
+		glm::vec3 movimiento = glm::vec3(car_path.getX(i), 0, car_path.getZ(i));
+
+		traslacion = glm::translate(glm::mat4(1.f), movimiento);
+		escalado = glm::scale(glm::mat4(1.f), glm::vec3(0.1f, 0.1f, 0.1f));
+		Cube::updateCube(traslacion * rotacion * escalado);
+		Cube::drawCube();
+
+	}
+
+
+	
 
 	Axis::drawAxis();
 	
@@ -650,8 +664,10 @@ void GLrender(float dt) {
 	// ...
 	// ...
 	// ...
+	std::cout << "------------------------------------------------------------------------------" << std::endl;
 	std::cout << "x: " << car_path.getX(0) << " " << car_path.getX(0.1f) << " " << car_path.getX(0.2f) << " " << car_path.getX(0.3f) << " " << car_path.getX(0.4f) << " " << car_path.getX(0.5f) << " " << car_path.getX(0.6f) << " " << car_path.getX(0.7f) << " " << car_path.getX(0.8f) << " " << car_path.getX(0.9f) << " " << car_path.getX(1) << " " << std::endl;
 	std::cout << "z: " << car_path.getZ(0) << " " << car_path.getZ(0.1f) << " " << car_path.getZ(0.2f) << " " << car_path.getZ(0.3f) << " " << car_path.getZ(0.4f) << " " << car_path.getZ(0.5f) << " " << car_path.getZ(0.6f) << " " << car_path.getZ(0.7f) << " " << car_path.getZ(0.8f) << " " << car_path.getZ(0.9f) << " " << car_path.getZ(1) << " " << std::endl;
+	std::cout << "rot: " << car_path.getYRot(0) << " " << car_path.getYRot(0.1f) << " " << car_path.getYRot(0.2f) << " " << car_path.getYRot(0.3f) << " " << car_path.getYRot(0.4f) << " " << car_path.getYRot(0.5f) << " " << car_path.getYRot(0.6f) << " " << car_path.getYRot(0.7f) << " " << car_path.getYRot(0.8f) << " " << car_path.getYRot(0.9f) << " " << car_path.getYRot(1) << " " << std::endl;
 	/////////////////////////////////////////////////////////
 
 	ImGui::Render();
