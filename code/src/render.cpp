@@ -9,6 +9,8 @@
 
 #include "GL_framework.h"
 #include <vector>
+#include <glm\glm.hpp>
+#include <iostream>
 
 
 ///////// fw decl
@@ -522,6 +524,57 @@ namespace Object {
 
 /////////////////////////////////////////////////
 
+class BezierCurve {
+private:
+	std::vector<glm::vec3> points;
+	glm::vec3 p0 = glm::vec3(0, 0, 0);
+	glm::vec3 p1 = glm::vec3(1, 0, 5);
+	glm::vec3 p2 = glm::vec3(2, 0, 5);
+	glm::vec3 p3 = glm::vec3(3, 0, 0);
+public:
+	float getX(float t) {
+		float totalX = 0;
+		for (int i = 0; i < points.size(); i++) {
+			int iBuena = i + 1;
+			totalX += points[i].x * combinatory(points.size(), iBuena) * glm::pow(t, iBuena) * glm::pow(1 - t, points.size() - iBuena);
+		}
+		return totalX;
+	}
+	float getZ(float t) {
+		float totalZ = 0;
+		for (int i = 0; i < points.size(); i++) {
+			int iBuena = i + 1;
+			totalZ += points[i].z * combinatory(points.size(), iBuena) * glm::pow(t, iBuena) * glm::pow(1 - t, points.size() - iBuena);
+		}
+		return totalZ;
+	}
+	float getYRot() {
+	
+		return 0;
+	}
+
+	unsigned long combinatory(int n, int i) {
+		return factorial(n) / (factorial(i) * factorial(n-i));
+	}
+
+	unsigned long factorial(int f)
+	{
+		if (f == 0)
+			return 1;
+		return(f * factorial(f - 1));
+	}
+
+	BezierCurve() {
+		points.push_back(p0);
+		points.push_back(p1);
+		points.push_back(p2);
+		points.push_back(p3);
+	}
+
+};
+BezierCurve car_path;
+float t = 0;
+///////////////////////////////////////////////////
 
 void GLinit(int width, int height) {
 	glViewport(0, 0, width, height);
@@ -530,7 +583,7 @@ void GLinit(int width, int height) {
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
-
+	
 	RV::_projection = glm::perspective(RV::FOV, (float)width / (float)height, RV::zNear, RV::zFar);
 
 	// Setup shaders & geometry
@@ -572,17 +625,33 @@ void GLrender(float dt) {
 	glm::mat4 escalado = glm::mat4(1.f);
 
 	//suelo
-	escalado = glm::scale(escalado, glm::vec3(10,1,10));
+	/*escalado = glm::scale(glm::mat4(1.f), glm::vec3(10,1,10));
+	Cube::updateCube(traslacion * rotacion * escalado);
+	Cube::drawCube();*/
+
+	//prueba coche con cubo
+
+	if (t <= 1) {
+		glm::vec3 movimiento = glm::vec3(car_path.getX(t),0,car_path.getZ(t));
+		traslacion = glm::translate(glm::mat4(1.f), movimiento);
+	}
+	else {
+		t = 0;
+	}
+	t += 0.01f;
+	escalado = glm::scale(glm::mat4(1.f), glm::vec3(1, 1, 1));
 	Cube::updateCube(traslacion * rotacion * escalado);
 	Cube::drawCube();
 
-	//Axis::drawAxis();
+	Axis::drawAxis();
 	
 	/////////////////////////////////////////////////////TODO
 	// Do your render code here
 	// ...
 	// ...
 	// ...
+	std::cout << "x: " << car_path.getX(0) << " " << car_path.getX(0.1f) << " " << car_path.getX(0.2f) << " " << car_path.getX(0.3f) << " " << car_path.getX(0.4f) << " " << car_path.getX(0.5f) << " " << car_path.getX(0.6f) << " " << car_path.getX(0.7f) << " " << car_path.getX(0.8f) << " " << car_path.getX(0.9f) << " " << car_path.getX(1) << " " << std::endl;
+	std::cout << "z: " << car_path.getZ(0) << " " << car_path.getZ(0.1f) << " " << car_path.getZ(0.2f) << " " << car_path.getZ(0.3f) << " " << car_path.getZ(0.4f) << " " << car_path.getZ(0.5f) << " " << car_path.getZ(0.6f) << " " << car_path.getZ(0.7f) << " " << car_path.getZ(0.8f) << " " << car_path.getZ(0.9f) << " " << car_path.getZ(1) << " " << std::endl;
 	/////////////////////////////////////////////////////////
 
 	ImGui::Render();
