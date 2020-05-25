@@ -355,7 +355,7 @@ extern bool loadOBJ(const char* path,
 
 namespace Object {
 
-	const char* path = "dragon.obj";
+	const char* path = "cotxe.obj";
 	float ambientStrength;
 	float diffuseStrength;
 	float specularStrength;
@@ -536,6 +536,7 @@ void GLinit(int width, int height) {
 	// Setup shaders & geometry
 	Axis::setupAxis();
 	Cube::setupCube();
+	Object::setupObject();
 
 
 	/////////////////////////////////////////////////////TODO
@@ -549,6 +550,7 @@ void GLinit(int width, int height) {
 void GLcleanup() {
 	Axis::cleanupAxis();
 	Cube::cleanupCube();
+	Object::cleanupObject();
 
 	/////////////////////////////////////////////////////TODO
 	// Do your cleanup code here
@@ -571,10 +573,21 @@ void GLrender(float dt) {
 	glm::mat4 rotacion = glm::mat4(1.f);
 	glm::mat4 escalado = glm::mat4(1.f);
 
+
 	//suelo
-	escalado = glm::scale(escalado, glm::vec3(10,1,10));
+
+	
+	escalado = glm::scale(glm::mat4(1.f), glm::vec3(50.f, 0.2f, 50.f));
 	Cube::updateCube(traslacion * rotacion * escalado);
 	Cube::drawCube();
+
+	traslacion = glm::translate(glm::mat4(1.f), glm::vec3(0, 0.3f, 0));
+	escalado = glm::scale(glm::mat4(1.f), glm::vec3(0.3f, 0.3f, 0.3f));
+	Object::updateObject(traslacion * rotacion * escalado);
+	Object::drawObject();
+
+
+
 
 	//Axis::drawAxis();
 	
