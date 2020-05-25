@@ -7,8 +7,15 @@
 #include <imgui\imgui.h>
 #include <imgui\imgui_impl_sdl_gl3.h>
 
+#include <iostream>
 #include "GL_framework.h"
 #include <vector>
+
+
+#define  STB_IMAGE_IMPLEMENTATION
+
+#include "stb_image.h"
+
 
 
 ///////// fw decl
@@ -372,7 +379,9 @@ namespace Object {
 	std::vector <glm::vec3> normals;
 
 	GLuint vao;
-	GLuint vbo[2];
+	GLuint vbo[3];
+	GLuint textureID;
+
 	GLuint shaders[2];
 	GLuint program;
 
@@ -382,16 +391,20 @@ namespace Object {
 		"#version 330\n"
 		"in vec3 in_Normal;\n"
 		"in vec3 in_Position;\n"
+		"in vec2 in_Uvs;\n"
 		"uniform mat4 objMat;\n"
 		"uniform mat4 mvpMat;\n"
 		"out vec4 vert_Normal;\n"
 		"out vec4 fragment_Position;\n"
+		"out vec2 textCoords;\n"
 		"void main() {\n"
 
 			"gl_Position = mvpMat * objMat * vec4(in_Position, 1.0);\n"
 
 			"vert_Normal = objMat * vec4(in_Normal, 0.0);\n"
 			"fragment_Position = objMat * vec4(in_Position, 1.0);\n"
+
+			"textCoords =in_Uvs; \n"
 
 		"}\n"
 	};
@@ -401,56 +414,16 @@ namespace Object {
 		"#version 330\n"
 		"in vec4 vert_Normal;\n"
 		"in vec4 fragment_Position;\n"
+		"in vec2 textCoords;\n"
 
-		"uniform float ambient_light;\n"
-		"uniform float diffuse_light;\n"
-		"uniform float specular_light;\n"
+		"uniform sampler2D objTexture;\n"
 
-		"uniform vec4 light_position;\n"
-		"uniform vec4 camera_position;\n"
+		"out vec4 color;\n"
 
-		"uniform vec4 object_color;\n"
-		"uniform vec4 light_color;\n"
-
-		"out vec4 final_ilumination;\n"
-
-		"vec4 ambientIlumination() {\n"
-
-			"return ambient_light * light_color;\n"
-
-		"}\n"
-
-		"vec4 diffuseIlumination() {\n"
-
-			"vec4 normal_vertx_normalized = normalize(vert_Normal);\n"
-
-			"vec4 ligth_direction_normalized = normalize(light_position - fragment_Position);\n"
-
-			"float diffuse = max(dot(normal_vertx_normalized, ligth_direction_normalized), 0.0);\n"
-
-			"return diffuse_light * light_color*diffuse;\n"
-
-		"}\n"
-
-		"vec4 specularIlumination() {\n"
-
-				"vec4 camera_direction = normalize(camera_position - fragment_Position);\n"
-
-				"vec4 normal_vertx_normalized = normalize(vert_Normal);\n"
-
-				"vec4 ligth_direction_normalized = normalize(light_position - fragment_Position);\n"
-
-				"vec4 reflect_direction = reflect(-ligth_direction_normalized, normal_vertx_normalized);\n"
-
-				"float specular = pow(max(dot(camera_direction, reflect_direction), 0.0), 256);\n"
-
-				"return specular_light * specular * light_color;\n"
-
-		"}\n"
 
 		"void main() {\n"
 
-			"final_ilumination = (ambientIlumination() + diffuseIlumination() + specularIlumination())*object_color;\n"
+			"color = texture(objTexture,textCoords);\n"
 
 		"}\n"
 	};
@@ -461,7 +434,7 @@ namespace Object {
 
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
-		glGenBuffers(2, vbo);
+		glGenBuffers(3, vbo);
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
@@ -472,6 +445,11 @@ namespace Object {
 		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
 		glVertexAttribPointer((GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(1);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+		glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
+		glVertexAttribPointer((GLuint)2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
 
 		glBindVertexArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -484,7 +462,53 @@ namespace Object {
 		glAttachShader(program, shaders[1]);
 		glBindAttribLocation(program, 0, "in_Position");
 		glBindAttribLocation(program, 1, "in_Normal");
+		glBindAttribLocation(program, 2, "in_Uvs");
 		linkProgram(program);
+
+
+		int width, height, channels;
+
+		stbi_set_flip_vertically_on_load(true);
+
+		unsigned char* data = stbi_load(
+			"colors.png",
+			&width,
+			&height,
+			&channels,
+			0);
+
+		if (data == NULL) {
+
+			fprintf(stderr, "No se lee nada %s\n", stbi_failure_reason());
+
+		}
+		else {
+			//leemos la imagen
+			glGenTextures(1, &textureID);
+
+			glBindTexture(GL_TEXTURE_2D, textureID);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+			glTexImage2D(
+				GL_TEXTURE_2D,
+				0,
+				GL_RGB,
+				width,
+				height,
+				0,
+				channels == 3 ? GL_RGB : GL_RGBA,
+				GL_UNSIGNED_BYTE,
+				data
+
+
+			);
+
+		}
+
+		stbi_image_free(data);
+
 
 		objMat = glm::mat4(1.f);
 	}
@@ -494,6 +518,9 @@ namespace Object {
 	}
 
 	void drawObject() {
+		std::cout << std::endl;
+		std::cout << vertices.size() <<std::endl;
+
 		glBindVertexArray(vao);
 		glUseProgram(program);
 
@@ -504,13 +531,13 @@ namespace Object {
 		glUniformMatrix4fv(glGetUniformLocation(program, "objMat"), 1, GL_FALSE, glm::value_ptr(objMat));
 		glUniformMatrix4fv(glGetUniformLocation(program, "mv_Mat"), 1, GL_FALSE, glm::value_ptr(RenderVars::_modelView));
 		glUniformMatrix4fv(glGetUniformLocation(program, "mvpMat"), 1, GL_FALSE, glm::value_ptr(RenderVars::_MVP));
-		glUniform4f(glGetUniformLocation(program, "object_color"), colorObj[0], colorObj[1], colorObj[2], colorObj[3]);
+		/*glUniform4f(glGetUniformLocation(program, "object_color"), colorObj[0], colorObj[1], colorObj[2], colorObj[3]);
 		glUniform4f(glGetUniformLocation(program, "light_color"), ligth_color[0], ligth_color[1], ligth_color[2], ligth_color[3]);
 		glUniform4f(glGetUniformLocation(program, "camera_position"), RV::panv[0], RV::panv[1], RV::panv[2], 1.f);
 		glUniform4f(glGetUniformLocation(program, "light_position"), Object::prueba[0], Object::prueba[1], Object::prueba[2], 1);
 		glUniform1f(glGetUniformLocation(program, "ambient_light"), Object::ambientStrength*0.001);
 		glUniform1f(glGetUniformLocation(program, "diffuse_light"), Object::diffuseStrength*0.001);
-		glUniform1f(glGetUniformLocation(program, "specular_light"), Object::specularStrength*0.01);
+		glUniform1f(glGetUniformLocation(program, "specular_light"), Object::specularStrength*0.01);*/
 		glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 
 		glUseProgram(0);
