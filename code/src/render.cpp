@@ -528,10 +528,14 @@ class BezierCurve {
 private:
 	std::vector<glm::vec3> points;
 	glm::vec3 p0 = glm::vec3(0, 0, 0);
-	glm::vec3 p1 = glm::vec3(1, 0, 5);
-	glm::vec3 p2 = glm::vec3(2, 0, 5);
-	glm::vec3 p3 = glm::vec3(3, 0, 0);
+	glm::vec3 p1 = glm::vec3(4, 0, -10);
+	glm::vec3 p2 = glm::vec3(8, 0, 10);
+	glm::vec3 p3 = glm::vec3(12, 0, -10);
+	glm::vec3 p4 = glm::vec3(16, 0, 0);
 public:
+	std::vector<glm::vec3> getPoints() {
+		return points;
+	}
 	float getX(float _t) {
 		float totalX = 0;
 		float tBuena = _t;
@@ -575,6 +579,7 @@ public:
 		points.push_back(p1);
 		points.push_back(p2);
 		points.push_back(p3);
+		points.push_back(p4);
 	}
 
 };
@@ -650,17 +655,17 @@ void GLrender(float dt) {
 	else {
 		t = 0;
 	}
-	t += ourDt;
+	t += ourDt / 5;
 	escalado = glm::scale(glm::mat4(1.f), glm::vec3(1, 1, 1));
 	Cube::updateCube(traslacion * rotacion * escalado);
 	Cube::drawCube();
 
 	//version cubitos
-	/*for (float i = 0; i <= 1; i += ourDt) {
+	for (float i = 0; i <= 1; i += ourDt) {
 		glm::vec3 movimiento = glm::vec3(car_path.getX(i), 0, car_path.getZ(i));
 		glm::vec3 movimientoDt = glm::vec3(car_path.getX(i+dt), 0, car_path.getZ(i+dt));
 		glm::vec3 vector_t_dt = movimientoDt - movimiento;
-		float angle = glm::atan(vector_t_dt.z/vector_t_dt.x);
+		float angle = glm::atan(vector_t_dt.x/vector_t_dt.z);
 
 		rotacion = glm::rotate(glm::mat4(1.f),angle,glm::vec3(0,1,0));
 		traslacion = glm::translate(glm::mat4(1.f), movimiento);
@@ -668,7 +673,14 @@ void GLrender(float dt) {
 		Cube::updateCube(traslacion * rotacion * escalado);
 		Cube::drawCube();
 
-	}*/
+	}
+	for (int i = 0; i < car_path.getPoints().size(); i++) {
+		rotacion = glm::mat4(1.f);
+		traslacion = glm::translate(glm::mat4(1.f), car_path.getPoints()[i]);
+		escalado = glm::scale(glm::mat4(1.f), glm::vec3(0.3f, 0.3f, 0.3f));
+		Cube::updateCube(traslacion * rotacion * escalado);
+		Cube::drawCube();
+	}
 
 
 	
