@@ -532,26 +532,32 @@ private:
 	glm::vec3 p2 = glm::vec3(2, 0, 5);
 	glm::vec3 p3 = glm::vec3(3, 0, 0);
 public:
-	float getX(float t) {
+	float getX(float _t) {
 		float totalX = 0;
+		float tBuena = _t;
+		if (tBuena > 1) tBuena = 1;
+
 		for (int i = 0; i < points.size(); i++) {
 			int iBuena = i + 1;
-			totalX += points[i].x * combinatory(points.size(), iBuena) * glm::pow(t, iBuena) * glm::pow(1 - t, points.size() - iBuena);
+			totalX += points[i].x * combinatory(points.size(), iBuena) * glm::pow(tBuena, iBuena) * glm::pow(1 - tBuena, points.size() - iBuena);
 		}
 		return totalX;
 	}
-	float getZ(float t) {
+	float getZ(float _t) {
 		float totalZ = 0;
+		float tBuena = _t;
+		if (tBuena > 1) tBuena = 1;
+
 		for (int i = 0; i < points.size(); i++) {
 			int iBuena = i + 1;
-			totalZ += points[i].z * combinatory(points.size(), iBuena) * glm::pow(t, iBuena) * glm::pow(1 - t, points.size() - iBuena);
+			totalZ += points[i].z * combinatory(points.size(), iBuena) * glm::pow(tBuena, iBuena) * glm::pow(1 - tBuena, points.size() - iBuena);
 		}
 		return totalZ;
 	}
-	float getYRot(float t) {
+	/*float getYRot(float t) {
 	
 		return glm::atan(getX(t) / getZ(t));
-	}
+	}*/
 
 	unsigned long combinatory(int n, int i) {
 		return factorial(n) / (factorial(i) * factorial(n-i));
@@ -574,6 +580,7 @@ public:
 };
 BezierCurve car_path;
 float t = 0;
+float ourDt = 0.01f;
 ///////////////////////////////////////////////////
 
 void GLinit(int width, int height) {
@@ -631,28 +638,37 @@ void GLrender(float dt) {
 
 	//prueba coche con cubo
 	//version movimiento
-	/*if (t <= 1) {
+	if (t <= 1) {
 		glm::vec3 movimiento = glm::vec3(car_path.getX(t),0,car_path.getZ(t));
+		glm::vec3 movimientoDt = glm::vec3(car_path.getX(t+dt), 0, car_path.getZ(t+dt));
+		glm::vec3 vector_t_dt = movimientoDt - movimiento;
+		float angle = glm::atan(vector_t_dt.x/vector_t_dt.z);
+
+		rotacion = glm::rotate(glm::mat4(1.f),angle,glm::vec3(0,1,0));
 		traslacion = glm::translate(glm::mat4(1.f), movimiento);
 	}
 	else {
 		t = 0;
 	}
-	t += 0.01f;
+	t += ourDt;
 	escalado = glm::scale(glm::mat4(1.f), glm::vec3(1, 1, 1));
 	Cube::updateCube(traslacion * rotacion * escalado);
-	Cube::drawCube();*/
+	Cube::drawCube();
 
 	//version cubitos
-	for (float i = 0; i <= 1; i += 0.01f) {
+	/*for (float i = 0; i <= 1; i += ourDt) {
 		glm::vec3 movimiento = glm::vec3(car_path.getX(i), 0, car_path.getZ(i));
+		glm::vec3 movimientoDt = glm::vec3(car_path.getX(i+dt), 0, car_path.getZ(i+dt));
+		glm::vec3 vector_t_dt = movimientoDt - movimiento;
+		float angle = glm::atan(vector_t_dt.z/vector_t_dt.x);
 
+		rotacion = glm::rotate(glm::mat4(1.f),angle,glm::vec3(0,1,0));
 		traslacion = glm::translate(glm::mat4(1.f), movimiento);
 		escalado = glm::scale(glm::mat4(1.f), glm::vec3(0.1f, 0.1f, 0.1f));
 		Cube::updateCube(traslacion * rotacion * escalado);
 		Cube::drawCube();
 
-	}
+	}*/
 
 
 	
@@ -664,10 +680,10 @@ void GLrender(float dt) {
 	// ...
 	// ...
 	// ...
-	std::cout << "------------------------------------------------------------------------------" << std::endl;
-	std::cout << "x: " << car_path.getX(0) << " " << car_path.getX(0.1f) << " " << car_path.getX(0.2f) << " " << car_path.getX(0.3f) << " " << car_path.getX(0.4f) << " " << car_path.getX(0.5f) << " " << car_path.getX(0.6f) << " " << car_path.getX(0.7f) << " " << car_path.getX(0.8f) << " " << car_path.getX(0.9f) << " " << car_path.getX(1) << " " << std::endl;
-	std::cout << "z: " << car_path.getZ(0) << " " << car_path.getZ(0.1f) << " " << car_path.getZ(0.2f) << " " << car_path.getZ(0.3f) << " " << car_path.getZ(0.4f) << " " << car_path.getZ(0.5f) << " " << car_path.getZ(0.6f) << " " << car_path.getZ(0.7f) << " " << car_path.getZ(0.8f) << " " << car_path.getZ(0.9f) << " " << car_path.getZ(1) << " " << std::endl;
-	std::cout << "rot: " << car_path.getYRot(0) << " " << car_path.getYRot(0.1f) << " " << car_path.getYRot(0.2f) << " " << car_path.getYRot(0.3f) << " " << car_path.getYRot(0.4f) << " " << car_path.getYRot(0.5f) << " " << car_path.getYRot(0.6f) << " " << car_path.getYRot(0.7f) << " " << car_path.getYRot(0.8f) << " " << car_path.getYRot(0.9f) << " " << car_path.getYRot(1) << " " << std::endl;
+	//std::cout << "------------------------------------------------------------------------------" << std::endl;
+	//std::cout << "x: " << car_path.getX(0) << " " << car_path.getX(0.1f) << " " << car_path.getX(0.2f) << " " << car_path.getX(0.3f) << " " << car_path.getX(0.4f) << " " << car_path.getX(0.5f) << " " << car_path.getX(0.6f) << " " << car_path.getX(0.7f) << " " << car_path.getX(0.8f) << " " << car_path.getX(0.9f) << " " << car_path.getX(1) << " " << std::endl;
+	//std::cout << "z: " << car_path.getZ(0) << " " << car_path.getZ(0.1f) << " " << car_path.getZ(0.2f) << " " << car_path.getZ(0.3f) << " " << car_path.getZ(0.4f) << " " << car_path.getZ(0.5f) << " " << car_path.getZ(0.6f) << " " << car_path.getZ(0.7f) << " " << car_path.getZ(0.8f) << " " << car_path.getZ(0.9f) << " " << car_path.getZ(1) << " " << std::endl;
+	//std::cout << "rot: " << car_path.getYRot(0) << " " << car_path.getYRot(0.1f) << " " << car_path.getYRot(0.2f) << " " << car_path.getYRot(0.3f) << " " << car_path.getYRot(0.4f) << " " << car_path.getYRot(0.5f) << " " << car_path.getYRot(0.6f) << " " << car_path.getYRot(0.7f) << " " << car_path.getYRot(0.8f) << " " << car_path.getYRot(0.9f) << " " << car_path.getYRot(1) << " " << std::endl;
 	/////////////////////////////////////////////////////////
 
 	ImGui::Render();
