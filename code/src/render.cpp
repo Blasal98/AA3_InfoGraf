@@ -565,11 +565,19 @@ void GLrender(float dt) {
 	RV::_modelView = glm::translate(RV::_modelView, glm::vec3(RV::panv[0], RV::panv[1], RV::panv[2]));
 	RV::_modelView = glm::rotate(RV::_modelView, RV::rota[1], glm::vec3(1.f, 0.f, 0.f));
 	RV::_modelView = glm::rotate(RV::_modelView, RV::rota[0], glm::vec3(0.f, 1.f, 0.f));
-
 	RV::_MVP = RV::_projection * RV::_modelView;
 
-	Axis::drawAxis();
+	glm::mat4 traslacion = glm::mat4(1.f);
+	glm::mat4 rotacion = glm::mat4(1.f);
+	glm::mat4 escalado = glm::mat4(1.f);
+
+	//suelo
+	escalado = glm::scale(escalado, glm::vec3(10,1,10));
+	Cube::updateCube(traslacion * rotacion * escalado);
 	Cube::drawCube();
+
+	//Axis::drawAxis();
+	
 	/////////////////////////////////////////////////////TODO
 	// Do your render code here
 	// ...
