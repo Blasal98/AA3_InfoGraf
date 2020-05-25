@@ -8,6 +8,8 @@
 #include <imgui\imgui_impl_sdl_gl3.h>
 
 #include "GL_framework.h"
+#include <vector>
+
 
 ///////// fw decl
 namespace ImGui {
@@ -344,6 +346,178 @@ void drawCube() {
 	glBindVertexArray(0);
 	glDisable(GL_PRIMITIVE_RESTART);
 }
+}
+//////////////////////////////////////////////////OBJ file (DRAGON)
+extern bool loadOBJ(const char* path,
+	std::vector <glm::vec3> & out_vertices,
+	std::vector <glm::vec2> & out_uvs,
+	std::vector <glm::vec3> & out_normals); //importamos la función hecha en clase
+
+namespace Object {
+
+	const char* path = "dragon.obj";
+	float ambientStrength;
+	float diffuseStrength;
+	float specularStrength;
+	glm::vec4 prueba;
+	std::vector <glm::vec3> vertices;
+	std::vector <glm::vec2> uvs;
+	std::vector <glm::vec3> normals;
+
+	GLuint vao;
+	GLuint vbo[2];
+	GLuint shaders[2];
+	GLuint program;
+
+	glm::mat4 objMat;
+
+	static const GLchar* vertex_shader_source[] = {
+		"#version 330\n"
+		"in vec3 in_Normal;\n"
+		"in vec3 in_Position;\n"
+		"uniform mat4 objMat;\n"
+		"uniform mat4 mvpMat;\n"
+		"out vec4 vert_Normal;\n"
+		"out vec4 fragment_Position;\n"
+		"void main() {\n"
+
+			"gl_Position = mvpMat * objMat * vec4(in_Position, 1.0);\n"
+
+			"vert_Normal = objMat * vec4(in_Normal, 0.0);\n"
+			"fragment_Position = objMat * vec4(in_Position, 1.0);\n"
+
+		"}\n"
+	};
+
+	// A fragment shader that assigns a static color
+	static const GLchar* fragment_shader_source[] = {
+		"#version 330\n"
+		"in vec4 vert_Normal;\n"
+		"in vec4 fragment_Position;\n"
+
+		"uniform float ambient_light;\n"
+		"uniform float diffuse_light;\n"
+		"uniform float specular_light;\n"
+
+		"uniform vec4 light_position;\n"
+		"uniform vec4 camera_position;\n"
+
+		"uniform vec4 object_color;\n"
+		"uniform vec4 light_color;\n"
+
+		"out vec4 final_ilumination;\n"
+
+		"vec4 ambientIlumination() {\n"
+
+			"return ambient_light * light_color;\n"
+
+		"}\n"
+
+		"vec4 diffuseIlumination() {\n"
+
+			"vec4 normal_vertx_normalized = normalize(vert_Normal);\n"
+
+			"vec4 ligth_direction_normalized = normalize(light_position - fragment_Position);\n"
+
+			"float diffuse = max(dot(normal_vertx_normalized, ligth_direction_normalized), 0.0);\n"
+
+			"return diffuse_light * light_color*diffuse;\n"
+
+		"}\n"
+
+		"vec4 specularIlumination() {\n"
+
+				"vec4 camera_direction = normalize(camera_position - fragment_Position);\n"
+
+				"vec4 normal_vertx_normalized = normalize(vert_Normal);\n"
+
+				"vec4 ligth_direction_normalized = normalize(light_position - fragment_Position);\n"
+
+				"vec4 reflect_direction = reflect(-ligth_direction_normalized, normal_vertx_normalized);\n"
+
+				"float specular = pow(max(dot(camera_direction, reflect_direction), 0.0), 256);\n"
+
+				"return specular_light * specular * light_color;\n"
+
+		"}\n"
+
+		"void main() {\n"
+
+			"final_ilumination = (ambientIlumination() + diffuseIlumination() + specularIlumination())*object_color;\n"
+
+		"}\n"
+	};
+
+
+	void setupObject() {
+		bool res = loadOBJ(path, vertices, uvs, normals);
+
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+		glGenBuffers(2, vbo);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+		glVertexAttribPointer((GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
+		glVertexAttribPointer((GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		shaders[0] = compileShader(vertex_shader_source[0], GL_VERTEX_SHADER, "objectVertexShader");
+		shaders[1] = compileShader(fragment_shader_source[0], GL_FRAGMENT_SHADER, "objectFragmentShader");
+
+		program = glCreateProgram();
+		glAttachShader(program, shaders[0]);
+		glAttachShader(program, shaders[1]);
+		glBindAttribLocation(program, 0, "in_Position");
+		glBindAttribLocation(program, 1, "in_Normal");
+		linkProgram(program);
+
+		objMat = glm::mat4(1.f);
+	}
+
+	void updateObject(glm::mat4 matrix) {
+		objMat = matrix;
+	}
+
+	void drawObject() {
+		glBindVertexArray(vao);
+		glUseProgram(program);
+
+
+		glm::vec4 colorObj = glm::vec4(1.53f, 0.28f, 0, 0.f);
+		glm::vec4 ligth_color = glm::vec4(255.f, 255.f, 255.f, 0.f);
+
+		glUniformMatrix4fv(glGetUniformLocation(program, "objMat"), 1, GL_FALSE, glm::value_ptr(objMat));
+		glUniformMatrix4fv(glGetUniformLocation(program, "mv_Mat"), 1, GL_FALSE, glm::value_ptr(RenderVars::_modelView));
+		glUniformMatrix4fv(glGetUniformLocation(program, "mvpMat"), 1, GL_FALSE, glm::value_ptr(RenderVars::_MVP));
+		glUniform4f(glGetUniformLocation(program, "object_color"), colorObj[0], colorObj[1], colorObj[2], colorObj[3]);
+		glUniform4f(glGetUniformLocation(program, "light_color"), ligth_color[0], ligth_color[1], ligth_color[2], ligth_color[3]);
+		glUniform4f(glGetUniformLocation(program, "camera_position"), RV::panv[0], RV::panv[1], RV::panv[2], 1.f);
+		glUniform4f(glGetUniformLocation(program, "light_position"), Object::prueba[0], Object::prueba[1], Object::prueba[2], 1);
+		glUniform1f(glGetUniformLocation(program, "ambient_light"), Object::ambientStrength*0.001);
+		glUniform1f(glGetUniformLocation(program, "diffuse_light"), Object::diffuseStrength*0.001);
+		glUniform1f(glGetUniformLocation(program, "specular_light"), Object::specularStrength*0.01);
+		glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+
+		glUseProgram(0);
+		glBindVertexArray(0);
+	}
+
+	void cleanupObject() {
+		glDeleteBuffers(3, vbo);
+		glDeleteVertexArrays(1, &vao);
+
+		glDeleteProgram(program);
+		glDeleteShader(shaders[0]);
+		glDeleteShader(shaders[1]);
+	}
 }
 
 /////////////////////////////////////////////////
