@@ -367,6 +367,70 @@ extern bool loadOBJ(const char* path,
 	std::vector <glm::vec2> & out_uvs,
 	std::vector <glm::vec3> & out_normals); //importamos la función hecha en clase
 
+
+class BezierCurve {
+private:
+	std::vector<glm::vec3> points;
+	glm::vec3 p0 = glm::vec3(0, 0, 0);
+	glm::vec3 p1 = glm::vec3(4, 0, -10);
+	glm::vec3 p2 = glm::vec3(8, 0, 10);
+	glm::vec3 p3 = glm::vec3(12, 0, -10);
+	glm::vec3 p4 = glm::vec3(16, 0, 0);
+public:
+	std::vector<glm::vec3> getPoints() {
+		return points;
+	}
+	float getX(float _t) {
+		float totalX = 0;
+		float tBuena = _t;
+		if (tBuena > 1) tBuena = 1;
+
+		for (int i = 0; i < points.size(); i++) {
+			int iBuena = i + 1;
+			totalX += points[i].x * combinatory(points.size(), iBuena) * glm::pow(tBuena, iBuena) * glm::pow(1 - tBuena, points.size() - iBuena);
+		}
+		return totalX;
+	}
+	float getZ(float _t) {
+		float totalZ = 0;
+		float tBuena = _t;
+		if (tBuena > 1) tBuena = 1;
+
+		for (int i = 0; i < points.size(); i++) {
+			int iBuena = i + 1;
+			totalZ += points[i].z * combinatory(points.size(), iBuena) * glm::pow(tBuena, iBuena) * glm::pow(1 - tBuena, points.size() - iBuena);
+		}
+		return totalZ;
+	}
+	/*float getYRot(float t) {
+
+		return glm::atan(getX(t) / getZ(t));
+	}*/
+
+	unsigned long combinatory(int n, int i) {
+		return factorial(n) / (factorial(i) * factorial(n - i));
+	}
+
+	unsigned long factorial(int f)
+	{
+		if (f == 0)
+			return 1;
+		return(f * factorial(f - 1));
+	}
+
+	BezierCurve() {
+		points.push_back(p0);
+		points.push_back(p1);
+		points.push_back(p2);
+		points.push_back(p3);
+		points.push_back(p4);
+	}
+
+};
+BezierCurve car_path;
+float t = 0;
+float ourDt = 0.01f;
+
 namespace Object {
 
 	const char* path = "cotxe.obj";
@@ -618,18 +682,33 @@ void GLrender(float dt) {
 	glm::mat4 rotacion = glm::mat4(1.f);
 	glm::mat4 escalado = glm::mat4(1.f);
 
+	if (t <= 1) {
+		glm::vec3 movimiento = glm::vec3(car_path.getX(t), 0, car_path.getZ(t));
+		glm::vec3 movimientoDt = glm::vec3(car_path.getX(t + dt), 0, car_path.getZ(t + dt));
+		glm::vec3 vector_t_dt = movimientoDt - movimiento;
+		float angle = glm::atan(vector_t_dt.x / vector_t_dt.z);
+
+		rotacion = glm::rotate(glm::mat4(1.f), angle, glm::vec3(0, 1, 0));
+		traslacion = glm::translate(glm::mat4(1.f), movimiento);
+	}
+	else {
+		t = 0;
+	}
+	t += ourDt / 5;
 
 	//suelo
 
 	
+	escalado = glm::scale(glm::mat4(1.f), glm::vec3(0.3f, 0.3f, 0.3f));
+	Object::updateObject(traslacion * rotacion * escalado);
+	Object::drawObject();
+
+	rotacion= glm::mat4(1.f);
+	traslacion = glm::translate(glm::mat4(1.f), glm::vec3(0, 0, 0));
 	escalado = glm::scale(glm::mat4(1.f), glm::vec3(50.f, 0.2f, 50.f));
 	Cube::updateCube(traslacion * rotacion * escalado);
 	Cube::drawCube();
 
-	traslacion = glm::translate(glm::mat4(1.f), glm::vec3(0, 0.3f, 0));
-	escalado = glm::scale(glm::mat4(1.f), glm::vec3(0.3f, 0.3f, 0.3f));
-	Object::updateObject(traslacion * rotacion * escalado);
-	Object::drawObject();
 
 
 
