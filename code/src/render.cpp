@@ -33,6 +33,8 @@ namespace RenderVars {
 	const float FOV = glm::radians(65.f);
 	const float zNear = 1.f;
 	const float zFar = 50.f;
+
+	int width, height;
 	bool cameraType = true;
 
 	glm::mat4 _projection;
@@ -56,6 +58,8 @@ namespace RV = RenderVars;
 
 void GLResize(int width, int height) {
 	glViewport(0, 0, width, height);
+	RV::width = width;
+	RV::height = height;
 	if(height != 0) RV::_projection = glm::perspective(RV::FOV, (float)width / (float)height, RV::zNear, RV::zFar);
 	else RV::_projection = glm::perspective(RV::FOV, 0.f, RV::zNear, RV::zFar);
 }
@@ -444,7 +448,7 @@ namespace Object {
 
 	GLuint vao;
 	GLuint vbo[3];
-	GLuint textureID;
+	GLuint textureIDCar;
 
 	GLuint shaders[2];
 	GLuint program;
@@ -548,9 +552,12 @@ namespace Object {
 		}
 		else {
 			//leemos la imagen
-			glGenTextures(1, &textureID);
+			glGenTextures(1, &textureIDCar);
 
-			glBindTexture(GL_TEXTURE_2D, textureID);
+			glBindTexture(GL_TEXTURE_2D, textureIDCar);
+		
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -582,13 +589,10 @@ namespace Object {
 	}
 
 	void drawObject() {
-		std::cout << std::endl;
-		std::cout << vertices.size() <<std::endl;
-
 		glBindVertexArray(vao);
 		glUseProgram(program);
 
-
+		glBindTexture(GL_TEXTURE_2D, textureIDCar);
 		glm::vec4 colorObj = glm::vec4(1.53f, 0.28f, 0, 0.f);
 		glm::vec4 ligth_color = glm::vec4(255.f, 255.f, 255.f, 0.f);
 
@@ -602,6 +606,7 @@ namespace Object {
 		glUniform1f(glGetUniformLocation(program, "ambient_light"), Object::ambientStrength*0.001);
 		glUniform1f(glGetUniformLocation(program, "diffuse_light"), Object::diffuseStrength*0.001);
 		glUniform1f(glGetUniformLocation(program, "specular_light"), Object::specularStrength*0.01);*/
+
 		glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 
 		glUseProgram(0);
@@ -618,65 +623,246 @@ namespace Object {
 	}
 }
 
+namespace Retrovisor {
+
+	const char* path = "untitled.obj";
+	float ambientStrength;
+	float diffuseStrength;
+	float specularStrength;
+	glm::vec4 prueba;
+	std::vector <glm::vec3> vertices;
+	std::vector <glm::vec2> uvs;
+	std::vector <glm::vec3> normals;
+
+	GLuint vao;
+	GLuint vbo[3];
+	GLuint textureID;
+
+	GLuint shaders[2];
+	GLuint program;
+
+	glm::mat4 objMat;
+
+	static const GLchar* vertex_shader_source[] = {
+		"#version 330\n"
+		"in vec3 in_Normal;\n"
+		"in vec3 in_Position;\n"
+		"in vec2 in_Uvs;\n"
+		"uniform mat4 objMat;\n"
+		"uniform mat4 mvpMat;\n"
+		"out vec4 vert_Normal;\n"
+		"out vec4 fragment_Position;\n"
+		"out vec2 textCoords;\n"
+		"void main() {\n"
+
+			"gl_Position = mvpMat * objMat * vec4(in_Position, 1.0);\n"
+
+			"vert_Normal = objMat * vec4(in_Normal, 0.0);\n"
+			"fragment_Position = objMat * vec4(in_Position, 1.0);\n"
+
+			"textCoords =in_Uvs; \n"
+
+		"}\n"
+	};
+
+	
+	static const GLchar* fragment_shader_source[] = {
+		"#version 330\n"
+		"in vec4 vert_Normal;\n"
+		"in vec4 fragment_Position;\n"
+		"in vec2 textCoords;\n"
+
+		"uniform sampler2D objTexture;\n"
+
+		"out vec4 color;\n"
+
+
+		"void main() {\n"
+
+			"color = texture(objTexture,textCoords);\n"
+
+		"}\n"
+	};
+
+
+	
+
+	void setupRetrovisor() {
+		bool res = loadOBJ(path, vertices, uvs, normals);
+
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+		glGenBuffers(3, vbo);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+		glVertexAttribPointer((GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
+		glVertexAttribPointer((GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+		glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
+		glVertexAttribPointer((GLuint)2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
+
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		shaders[0] = compileShader(vertex_shader_source[0], GL_VERTEX_SHADER, "objectVertexShader");
+		shaders[1] = compileShader(fragment_shader_source[0], GL_FRAGMENT_SHADER, "objectFragmentShader");
+
+		program = glCreateProgram();
+		glAttachShader(program, shaders[0]);
+		glAttachShader(program, shaders[1]);
+		glBindAttribLocation(program, 0, "in_Position");
+		glBindAttribLocation(program, 1, "in_Normal");
+		glBindAttribLocation(program, 2, "in_Uvs");
+		linkProgram(program);
+
+
+		int width, height, channels;
+
+		stbi_set_flip_vertically_on_load(true);
+
+		unsigned char* data = stbi_load(
+			"Captura.png",
+			&width,
+			&height,
+			&channels,
+			0);
+
+		if (data == NULL) {
+
+			fprintf(stderr, "No se lee nada %s\n", stbi_failure_reason());
+
+		}
+		else {
+			//leemos la imagen
+			glGenTextures(1, &textureID);
+
+			glBindTexture(GL_TEXTURE_2D, textureID);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+			glTexImage2D(
+				GL_TEXTURE_2D,
+				0,
+				GL_RGB,
+				width,
+				height,
+				0,
+				channels == 3 ? GL_RGB : GL_RGBA,
+				GL_UNSIGNED_BYTE,
+				data
+
+
+			);
+
+		}
+
+		stbi_image_free(data);
+
+
+		objMat = glm::mat4(1.f);
+	}
+
+	void updateRetrovisor(glm::mat4 matrix) {
+		objMat = matrix;
+	}
+
+	void drawRetrovisor(GLuint  tex = NULL) {
+
+		glm::mat4 rotacion = glm::mat4(1.f);
+		glm::mat4 traslacion = glm::translate(glm::mat4(1.f), glm::vec3(0, -0.5f, -6));
+		glm::mat4 escalado = glm::scale(glm::mat4(1.f), glm::vec3(2.f, 2.0f, 2.f));
+		Retrovisor::updateRetrovisor(traslacion * rotacion * escalado);
+
+		glBindVertexArray(vao);
+		glUseProgram(program);
+		glBindTexture(GL_TEXTURE_2D, textureID);
+
+		glm::vec4 colorObj = glm::vec4(1.53f, 0.28f, 0, 0.f);
+		glm::vec4 ligth_color = glm::vec4(255.f, 255.f, 255.f, 0.f);
+
+		glUniformMatrix4fv(glGetUniformLocation(program, "objMat"), 1, GL_FALSE, glm::value_ptr(objMat));
+		glUniformMatrix4fv(glGetUniformLocation(program, "mv_Mat"), 1, GL_FALSE, glm::value_ptr(RenderVars::_modelView));
+		glUniformMatrix4fv(glGetUniformLocation(program, "mvpMat"), 1, GL_FALSE, glm::value_ptr(RenderVars::_MVP));
+		/*glUniform4f(glGetUniformLocation(program, "object_color"), colorObj[0], colorObj[1], colorObj[2], colorObj[3]);
+		glUniform4f(glGetUniformLocation(program, "light_color"), ligth_color[0], ligth_color[1], ligth_color[2], ligth_color[3]);
+		glUniform4f(glGetUniformLocation(program, "camera_position"), RV::panv[0], RV::panv[1], RV::panv[2], 1.f);
+		glUniform4f(glGetUniformLocation(program, "light_position"), Object::prueba[0], Object::prueba[1], Object::prueba[2], 1);
+		glUniform1f(glGetUniformLocation(program, "ambient_light"), Object::ambientStrength*0.001);
+		glUniform1f(glGetUniformLocation(program, "diffuse_light"), Object::diffuseStrength*0.001);
+		glUniform1f(glGetUniformLocation(program, "specular_light"), Object::specularStrength*0.01);*/
+		
+
+		//esteifesopcional
+
+		if (tex == NULL) {
+			glBindTexture(GL_TEXTURE_2D, textureID);
+		}
+		else {
+			glBindTexture(GL_TEXTURE_2D, tex);
+		}
+		
+		glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+
+
+	}
+
+
+
+	void cleanupRetrovisor() {
+		glDeleteBuffers(3, vbo);
+		glDeleteVertexArrays(1, &vao);
+
+		glDeleteProgram(program);
+		glDeleteShader(shaders[0]);
+		glDeleteShader(shaders[1]);
+	}
+}
+
 /////////////////////////////////////////////////
 
 
-void GLinit(int width, int height) {
-	glViewport(0, 0, width, height);
-	glClearColor(0.2f, 0.2f, 0.2f, 1.f);
-	glClearDepth(1.f);
-	glDepthFunc(GL_LEQUAL);
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+GLuint fbo, fbo_texture,rbo;
+void setupFBO() {
 
-	RV::_projection = glm::perspective(RV::FOV, (float)width / (float)height, RV::zNear, RV::zFar);
+	glGenFramebuffers(1, &fbo);
+	glGenTextures(1, &fbo_texture);
+	glBindTexture(GL_TEXTURE_2D, fbo_texture);
 
-	// Setup shaders & geometry
-	Axis::setupAxis();
-	Cube::setupCube();
-	Object::setupObject();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+	//OLLO AQUI
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1500, 1000, 0, GL_RGB, GL_UNSIGNED_INT, NULL);
 
-	/////////////////////////////////////////////////////TODO
-	// Do your init code here
-	// ...
-	// ...
-	// ...
-	/////////////////////////////////////////////////////////
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo_texture, 0);
+
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1500, 1000);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+	//por seguriddad
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	//nos vamos pal init
 }
-
-void GLcleanup() {
-	Axis::cleanupAxis();
-	Cube::cleanupCube();
-	Object::cleanupObject();
-
-	/////////////////////////////////////////////////////TODO
-	// Do your cleanup code here
-	// ...
-	// ...
-	// ...
-	/////////////////////////////////////////////////////////
-}
-
-void GLrender(float dt) {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	if (RV::cameraType) {
-		RV::_modelView = glm::mat4(1.f);
-		RV::_modelView = glm::translate(RV::_modelView, glm::vec3(RV::panv[0], RV::panv[1], RV::panv[2]));
-		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[1], glm::vec3(1.f, 0.f, 0.f));
-		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[0], glm::vec3(0.f, 1.f, 0.f));
-
-
-	}
-	else {
-
-		RV::_modelView = glm::mat4(1.f);
-		RV::_modelView = glm::translate(glm::mat4(1.f), glm::vec3(0, -1.f, -2.f));
-		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[1], glm::vec3(1.f, 0.f, 0.f));
-		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[0], glm::vec3(0.f, 1.f, 0.f));
-	}
-	RV::_MVP = RV::_projection * RV::_modelView;
+void drawObjects(float dt) {
 
 	glm::mat4 traslacion = glm::mat4(1.f);
 	glm::mat4 rotacion = glm::mat4(1.f);
@@ -698,29 +884,124 @@ void GLrender(float dt) {
 
 	//suelo
 
-	
+
 	escalado = glm::scale(glm::mat4(1.f), glm::vec3(0.3f, 0.3f, 0.3f));
 	Object::updateObject(traslacion * rotacion * escalado);
 	Object::drawObject();
 
-	rotacion= glm::mat4(1.f);
+	rotacion = glm::mat4(1.f);
 	traslacion = glm::translate(glm::mat4(1.f), glm::vec3(0, 0, 0));
 	escalado = glm::scale(glm::mat4(1.f), glm::vec3(50.f, 0.2f, 50.f));
 	Cube::updateCube(traslacion * rotacion * escalado);
 	Cube::drawCube();
 
-
-
-
-
-	//Axis::drawAxis();
 	
+
+
+}
+void drawRetrovisorFBOTexture(float dt) {
+	glm::mat4 t_mvp = RV::_MVP;
+	glm::mat4 t_mv = RV::_modelView;
+
+
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glClearColor(1.f, 1.f, 1.f, 0.2f);
+	glViewport(0, 0, 1500, 1000);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+
+	RV::_modelView = glm::translate(glm::mat4(1.f), glm::vec3(0, 0,-6));
+
+	RV::_MVP = glm::perspective(RV::FOV,(float)1500/(float)1000, RV::zNear, RV::zFar) *RV::_modelView;
+	
+	drawObjects(dt);
+
+	RV::_modelView = t_mv;
+	RV::_MVP = t_mvp;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glViewport(0, 0,RV::width, RV::height);
+	glClearColor(0.2f, 0.2f, 0.2f, 1.f);
+
+	Retrovisor::drawRetrovisor(fbo_texture);
+}
+
+
+void GLinit(int width, int height) {
+	glViewport(0, 0, width, height);
+	RV::width = width;
+	RV::height = height;
+	glClearColor(0.2f, 0.2f, 0.2f, 1.f);
+	glClearDepth(1.f);
+	glDepthFunc(GL_LEQUAL);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+
+	RV::_projection = glm::perspective(RV::FOV, (float)width / (float)height, RV::zNear, RV::zFar);
+
+	// Setup shaders & geometry
+	
+	
+	Axis::setupAxis();
+	Cube::setupCube();
+	Object::setupObject();
+	Retrovisor::setupRetrovisor();
+	setupFBO();
+
+
+	
+
+
 	/////////////////////////////////////////////////////TODO
-	// Do your render code here
+	// Do your init code here
 	// ...
 	// ...
 	// ...
 	/////////////////////////////////////////////////////////
+}
+
+void GLcleanup() {
+	Axis::cleanupAxis();
+	Cube::cleanupCube();
+	Object::cleanupObject();
+	Retrovisor::cleanupRetrovisor();
+
+	glDeleteRenderbuffers(1 ,&rbo);
+	/////////////////////////////////////////////////////TODO
+	// Do your cleanup code here
+	// ...
+	// ...
+	// ...
+	/////////////////////////////////////////////////////////
+}
+
+void GLrender(float dt) {
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	if (RV::cameraType) {
+		RV::_modelView = glm::mat4(1.f);
+		RV::_modelView = glm::translate(RV::_modelView, glm::vec3(RV::panv[0], RV::panv[1], RV::panv[2]));
+		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[1], glm::vec3(1.f, 0.f, 0.f));
+		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[0], glm::vec3(0.f, 1.f, 0.f));
+
+
+	}
+	else {
+
+		RV::_modelView = glm::mat4(1.f);
+		RV::_modelView = glm::translate(glm::mat4(1.f), glm::vec3(0, -1.f, -2.f));
+		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[1], glm::vec3(1.f, 0.f, 0.f));
+		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[0], glm::vec3(0.f, 1.f, 0.f));
+	}
+	RV::_MVP = RV::_projection * RV::_modelView;
+
+
+
+	drawRetrovisorFBOTexture(dt);
+	drawObjects(dt);
+
 
 	ImGui::Render();
 }
