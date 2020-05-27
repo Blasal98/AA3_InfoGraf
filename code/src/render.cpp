@@ -636,8 +636,7 @@ namespace Retrovisor {
 
 	GLuint vao;
 	GLuint vbo[3];
-	GLuint textureID;
-
+	
 	GLuint shaders[2];
 	GLuint program;
 
@@ -724,50 +723,7 @@ namespace Retrovisor {
 		linkProgram(program);
 
 
-		int width, height, channels;
-
-		stbi_set_flip_vertically_on_load(true);
-
-		unsigned char* data = stbi_load(
-			"Captura.png",
-			&width,
-			&height,
-			&channels,
-			0);
-
-		if (data == NULL) {
-
-			fprintf(stderr, "No se lee nada %s\n", stbi_failure_reason());
-
-		}
-		else {
-			//leemos la imagen
-			glGenTextures(1, &textureID);
-
-			glBindTexture(GL_TEXTURE_2D, textureID);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-
-			glTexImage2D(
-				GL_TEXTURE_2D,
-				0,
-				GL_RGB,
-				width,
-				height,
-				0,
-				channels == 3 ? GL_RGB : GL_RGBA,
-				GL_UNSIGNED_BYTE,
-				data
-
-
-			);
-
-		}
-
-		stbi_image_free(data);
+	
 
 
 		objMat = glm::mat4(1.f);
@@ -786,7 +742,7 @@ namespace Retrovisor {
 
 		glBindVertexArray(vao);
 		glUseProgram(program);
-		glBindTexture(GL_TEXTURE_2D, textureID);
+		
 
 		glm::vec4 colorObj = glm::vec4(1.53f, 0.28f, 0, 0.f);
 		glm::vec4 ligth_color = glm::vec4(255.f, 255.f, 255.f, 0.f);
@@ -805,13 +761,10 @@ namespace Retrovisor {
 
 		//esteifesopcional
 
-		if (tex == NULL) {
-			glBindTexture(GL_TEXTURE_2D, textureID);
-		}
-		else {
-			glBindTexture(GL_TEXTURE_2D, tex);
-		}
 		
+			glBindTexture(GL_TEXTURE_2D, tex);
+		
+	
 		glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 
 
