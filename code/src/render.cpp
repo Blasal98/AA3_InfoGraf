@@ -452,11 +452,11 @@ public:
 
 	BezierCurve() {
 
-		/*p0 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);
+		p0 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);
 		p1 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);
 		p2 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);
 		p3 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);
-		p4 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);*/
+		p4 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);
 
 		points.push_back(p0);
 		points.push_back(p1);
@@ -977,8 +977,14 @@ void GLrender(float dt) {
 			glm::vec3 movimientoDt = glm::vec3(car_path.getX(t + dt), 0, car_path.getZ(t + dt));
 			direccion = movimientoDt - movimiento;
 			angulo = glm::atan(direccion.x / direccion.z);
-			if (angulo < 0)
-				angulo += glm::pi<float>();
+			if (angulo < 0) {
+				if(direccion.x > 0)
+					angulo += glm::pi<float>();
+				else if (direccion.z > 0)
+					angulo += glm::pi<float>();
+				//std::cout << "AQUI" << std::endl;
+			}
+			
 		}
 		movimiento += glm::vec3(0, 0.3f, 0);
 
@@ -1008,9 +1014,9 @@ void GLrender(float dt) {
 	}
 	RV::_MVP = RV::_projection * RV::_modelView;
 
-	std::cout << "Position" << movimiento.x << " " << movimiento.y << " " << movimiento.z << std::endl; //CAMBIOS
-	std::cout << "Direction" << direccion.x << " " << direccion.y << " " << direccion.z << std::endl; //CAMBIOS
-	std::cout << "Angulo" << angulo << std::endl; //CAMBIOS
+	std::cout << "Position :" << movimiento.x << " " << movimiento.y << " " << movimiento.z << std::endl; //CAMBIOS
+	std::cout << "Direction : " << direccion.x << " " << direccion.y << " " << direccion.z << std::endl; //CAMBIOS
+	std::cout << "Angulo: " << angulo << std::endl; //CAMBIOS
 	std::cout << "---------------------------" << std::endl;
 
 	drawRetrovisorFBOTexture(dt);
