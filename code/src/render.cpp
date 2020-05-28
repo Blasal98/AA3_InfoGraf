@@ -92,6 +92,32 @@ void GLmousecb(MouseEvent ev) {
 		RV::prevMouse.lastx = ev.posx;
 		RV::prevMouse.lasty = ev.posy;
 	}
+	else {
+		if (RV::prevMouse.waspressed && RV::prevMouse.button == ev.button) {
+			float diffx = ev.posx - RV::prevMouse.lastx;
+			float diffy = ev.posy - RV::prevMouse.lasty;
+			switch (ev.button) {
+			case MouseEvent::Button::Left: // ROTATE
+				RV::rota[0] += diffx * 0.005f;
+				RV::rota[1] += diffy * 0.005f;
+				break;
+			//case MouseEvent::Button::Right: // MOVE XY
+			//	RV::panv[0] += diffx * 0.03f;
+			//	RV::panv[1] -= diffy * 0.03f;
+			//	break;
+			//case MouseEvent::Button::Middle: // MOVE Z
+			//	RV::panv[2] += diffy * 0.05f;
+			//	break;
+			default: break;
+			}
+		}
+		else {
+			RV::prevMouse.button = ev.button;
+			RV::prevMouse.waspressed = true;
+		}
+		RV::prevMouse.lastx = ev.posx;
+		RV::prevMouse.lasty = ev.posy;
+	}
 }
 
 //////////////////////////////////////////////////
@@ -434,6 +460,9 @@ public:
 BezierCurve car_path;
 float t = 0;
 float ourDt = 0.01f;
+glm::vec3 movimiento;
+float angulo;
+
 
 namespace Object {
 
@@ -822,12 +851,14 @@ void drawObjects(float dt) {
 	glm::mat4 escalado = glm::mat4(1.f);
 
 	if (t <= 1) {
-		glm::vec3 movimiento = glm::vec3(car_path.getX(t), 0, car_path.getZ(t));
+		movimiento = glm::vec3(car_path.getX(t), 0, car_path.getZ(t));
 		glm::vec3 movimientoDt = glm::vec3(car_path.getX(t + dt), 0, car_path.getZ(t + dt));
 		glm::vec3 vector_t_dt = movimientoDt - movimiento;
-		float angle = glm::atan(vector_t_dt.x / vector_t_dt.z);
+		angulo = glm::atan(vector_t_dt.x / vector_t_dt.z);
+		if (angulo < 0)
+			angulo += glm::radians(180.f);
 
-		rotacion = glm::rotate(glm::mat4(1.f), angle, glm::vec3(0, 1, 0));
+		rotacion = glm::rotate(glm::mat4(1.f), angulo, glm::vec3(0, 1, 0));
 		traslacion = glm::translate(glm::mat4(1.f), movimiento);
 	}
 	else {
@@ -835,19 +866,26 @@ void drawObjects(float dt) {
 	}
 	t += ourDt / 5;
 
-	//suelo
 
 
 	escalado = glm::scale(glm::mat4(1.f), glm::vec3(0.3f, 0.3f, 0.3f));
 	Object::updateObject(traslacion * rotacion * escalado);
 	Object::drawObject();
 
+
+	//suelo
 	rotacion = glm::mat4(1.f);
 	traslacion = glm::translate(glm::mat4(1.f), glm::vec3(0, 0, 0));
 	escalado = glm::scale(glm::mat4(1.f), glm::vec3(50.f, 0.2f, 50.f));
 	Cube::updateCube(traslacion * rotacion * escalado);
 	Cube::drawCube();
 
+	//pared
+	rotacion = glm::mat4(1.f);
+	traslacion = glm::translate(glm::mat4(1.f), glm::vec3(0, 0, 15));
+	escalado = glm::scale(glm::mat4(1.f), glm::vec3(50.f, 50.f, 1.f));
+	Cube::updateCube(traslacion * rotacion * escalado);
+	Cube::drawCube();
 	
 
 
@@ -942,11 +980,12 @@ void GLrender(float dt) {
 
 	}
 	else {
-
+		std::cout << movimiento.x << " " << movimiento.y << " " << movimiento.z << std::endl;
 		RV::_modelView = glm::mat4(1.f);
-		RV::_modelView = glm::translate(glm::mat4(1.f), glm::vec3(0, -1.f, -2.f));
-		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[1], glm::vec3(1.f, 0.f, 0.f));
-		RV::_modelView = glm::rotate(RV::_modelView, RV::rota[0], glm::vec3(0.f, 1.f, 0.f));
+		RV::_modelView = glm::rotate(RV::_modelView, -angulo + glm::pi<float>() , glm::vec3(0.f, 1.f, 0.f));
+		RV::_modelView = glm::translate(RV::_modelView, movimiento * (-1.f) + glm::vec3(0,-1.1f,0));
+		
+		//RV::_modelView = glm::rotate(RV::_modelView, glm::radians(180.f), glm::vec3(0.f, 1.f, 0.f));
 	}
 	RV::_MVP = RV::_projection * RV::_modelView;
 
