@@ -980,9 +980,12 @@ void GLrender(float dt) {
 			if (angulo < 0) {
 				if(direccion.x > 0)
 					angulo += glm::pi<float>();
-				else if (direccion.z > 0)
+				
+			}
+			else if (angulo > 0) {
+				if (direccion.x < 0)
 					angulo += glm::pi<float>();
-				//std::cout << "AQUI" << std::endl;
+
 			}
 			
 		}
@@ -1022,6 +1025,19 @@ void GLrender(float dt) {
 	drawRetrovisorFBOTexture(dt);
 	drawObjects(dt);
 
+	for (float i = 0; i <= 1; i += ourDt) {
+		glm::vec3 mov = glm::vec3(car_path.getX(i), 0, car_path.getZ(i));
+		glm::vec3 movDt = glm::vec3(car_path.getX(i + dt), 0, car_path.getZ(i + dt));
+		glm::vec3 vector_t_dt = movDt - mov;
+		float ang = glm::atan(vector_t_dt.x / vector_t_dt.z);
+
+		glm::mat4 rot = glm::rotate(glm::mat4(1.f), ang, glm::vec3(0, 1.f, 0));
+		glm::mat4 tras = glm::translate(glm::mat4(1.f), mov + glm::vec3(0,5,0));
+		glm::mat4 esc = glm::scale(glm::mat4(1.f), glm::vec3(0.1f, 0.1f, 0.1f));
+		Cube::updateCube(tras * rot * esc);
+		Cube::drawCube();
+
+	}
 
 	ImGui::Render();
 }
