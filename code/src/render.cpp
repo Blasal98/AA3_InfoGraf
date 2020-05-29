@@ -10,6 +10,7 @@
 #include <iostream>
 #include "GL_framework.h"
 #include <vector>
+#include <time.h>
 
 
 #define  STB_IMAGE_IMPLEMENTATION
@@ -919,6 +920,8 @@ void drawRetrovisorFBOTexture(float dt) {
 
 
 void GLinit(int width, int height) {
+	std::srand(time(NULL));
+	car_path = BezierCurve();
 	glViewport(0, 0, width, height);
 	RV::width = width;
 	RV::height = height;
