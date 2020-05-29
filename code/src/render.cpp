@@ -3,7 +3,7 @@
 #include <glm\gtc\matrix_transform.hpp>
 #include <cstdio>
 #include <cassert>
-
+#include <string>
 #include <imgui\imgui.h>
 #include <imgui\imgui_impl_sdl_gl3.h>
 
@@ -17,6 +17,9 @@
 
 #include "stb_image.h"
 
+
+std::vector<glm::mat4> objmats;
+GLuint count = 100;
 
 
 ///////// fw decl
@@ -487,27 +490,27 @@ namespace Object {
 	std::vector <glm::vec3> normals;
 
 	GLuint vao;
-	GLuint vbo[3];
+	GLuint vbo[4];
 	GLuint textureIDCar;
 
 	GLuint shaders[2];
 	GLuint program;
 
-	glm::mat4 objMat;
+
 
 	static const GLchar* vertex_shader_source[] = {
 		"#version 330\n"
-		"in vec3 in_Normal;\n"
-		"in vec3 in_Position;\n"
-		"in vec2 in_Uvs;\n"
-		"uniform mat4 objMat;\n"
+		" in vec3 in_Normal;\n"
+		" in vec3 in_Position;\n"
+		" in vec2 in_Uvs;\n"
+		" in mat4 objMat;\n"
 		"uniform mat4 mvpMat;\n"
 		"out vec4 vert_Normal;\n"
 		"out vec4 fragment_Position;\n"
 		"out vec2 textCoords;\n"
 		"void main() {\n"
 
-			"gl_Position = mvpMat * objMat * vec4(in_Position, 1.0);\n"
+			"gl_Position = mvpMat * objMat* vec4(in_Position, 1.0);\n"
 
 			"vert_Normal = objMat * vec4(in_Normal, 0.0);\n"
 			"fragment_Position = objMat * vec4(in_Position, 1.0);\n"
@@ -537,12 +540,13 @@ namespace Object {
 	};
 
 
-	void setupObject() {
+	void setupObject(std::vector<glm::mat4> objmats) {
+
 		bool res = loadOBJ(path, vertices, uvs, normals);
 
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
-		glGenBuffers(3, vbo);
+		glGenBuffers(4, vbo);
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
@@ -559,8 +563,31 @@ namespace Object {
 		glVertexAttribPointer((GLuint)2, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(2);
 
-		glBindVertexArray(0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
+		glBufferData(GL_ARRAY_BUFFER, objmats.size() * sizeof(glm::mat4), &objmats[0][0], GL_DYNAMIC_DRAW);
+	
+
+		size_t attributesize = sizeof(glm::vec4);
+
+
+		for (int i = 0; i < 4; i++) {
+
+			GLuint attribute = 3 + i;
+
+			glVertexAttribPointer(attribute, 4, GL_FLOAT, GL_FALSE, 
+				attributesize*4, 
+				(void*)(attributesize*i)
+			);
+
+			glEnableVertexAttribArray(attribute);
+			glVertexAttribDivisor(attribute, 1);
+		}
+		
+		
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		glBindVertexArray(0);
 
 		shaders[0] = compileShader(vertex_shader_source[0], GL_VERTEX_SHADER, "objectVertexShader");
 		shaders[1] = compileShader(fragment_shader_source[0], GL_FRAGMENT_SHADER, "objectFragmentShader");
@@ -571,6 +598,7 @@ namespace Object {
 		glBindAttribLocation(program, 0, "in_Position");
 		glBindAttribLocation(program, 1, "in_Normal");
 		glBindAttribLocation(program, 2, "in_Uvs");
+		glBindAttribLocation(program, 3, "objMat");
 		linkProgram(program);
 
 
@@ -620,41 +648,68 @@ namespace Object {
 
 		stbi_image_free(data);
 
-
-		objMat = glm::mat4(1.f);
+	
 	}
 
-	void updateObject(glm::mat4 matrix) {
-		objMat = matrix;
+	void updateObject(std::vector<glm::mat4> objmats, int start , int count) {
+		//TODO Mapbuffer
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
+
+		glm::mat4* mats =reinterpret_cast<glm::mat4*>(glMapBufferRange(
+		GL_ARRAY_BUFFER,
+			start,
+			count*sizeof(glm::mat4),
+			GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT
+		));
+
+
+
+		GLenum error = glGetError();
+
+		switch (error)
+		{
+		case GL_INVALID_VALUE:
+			std::cout << "Error de valores" << std::endl;
+			break;
+		case GL_INVALID_OPERATION:
+			std::cout << "Error en la operacion" << std::endl;
+			break;
+		case GL_OUT_OF_MEMORY:
+			std::cout << "Sin memoria" << std::endl;
+			break;
+		}
+
+		std::copy(objmats.begin(), objmats.end(), mats);
+
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
-	void drawObject() {
+	void BindVaoAndProgramCar() {
 		glBindVertexArray(vao);
 		glUseProgram(program);
-
+	}
+	void UnbindVaoAndProgramCar() {
+		glBindVertexArray(0);
+		glUseProgram(0);
+	}
+	void CarUniformsAndTexture() {
 		glBindTexture(GL_TEXTURE_2D, textureIDCar);
-		glm::vec4 colorObj = glm::vec4(1.53f, 0.28f, 0, 0.f);
-		glm::vec4 ligth_color = glm::vec4(255.f, 255.f, 255.f, 0.f);
-
-		glUniformMatrix4fv(glGetUniformLocation(program, "objMat"), 1, GL_FALSE, glm::value_ptr(objMat));
 		glUniformMatrix4fv(glGetUniformLocation(program, "mv_Mat"), 1, GL_FALSE, glm::value_ptr(RenderVars::_modelView));
 		glUniformMatrix4fv(glGetUniformLocation(program, "mvpMat"), 1, GL_FALSE, glm::value_ptr(RenderVars::_MVP));
-		/*glUniform4f(glGetUniformLocation(program, "object_color"), colorObj[0], colorObj[1], colorObj[2], colorObj[3]);
-		glUniform4f(glGetUniformLocation(program, "light_color"), ligth_color[0], ligth_color[1], ligth_color[2], ligth_color[3]);
-		glUniform4f(glGetUniformLocation(program, "camera_position"), RV::panv[0], RV::panv[1], RV::panv[2], 1.f);
-		glUniform4f(glGetUniformLocation(program, "light_position"), Object::prueba[0], Object::prueba[1], Object::prueba[2], 1);
-		glUniform1f(glGetUniformLocation(program, "ambient_light"), Object::ambientStrength*0.001);
-		glUniform1f(glGetUniformLocation(program, "diffuse_light"), Object::diffuseStrength*0.001);
-		glUniform1f(glGetUniformLocation(program, "specular_light"), Object::specularStrength*0.01);*/
 
-		glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+	}
 
-		glUseProgram(0);
-		glBindVertexArray(0);
+	void drawObject(int count) {
+
+
+		glDrawArraysInstanced(GL_TRIANGLES, 0, vertices.size(),objmats.size());
+
 	}
 
 	void cleanupObject() {
-		glDeleteBuffers(3, vbo);
+		glDeleteBuffers(4, vbo);
 		glDeleteVertexArrays(1, &vao);
 
 		glDeleteProgram(program);
@@ -790,17 +845,7 @@ namespace Retrovisor {
 		glUniformMatrix4fv(glGetUniformLocation(program, "objMat"), 1, GL_FALSE, glm::value_ptr(objMat));
 		glUniformMatrix4fv(glGetUniformLocation(program, "mv_Mat"), 1, GL_FALSE, glm::value_ptr(RenderVars::_modelView));
 		glUniformMatrix4fv(glGetUniformLocation(program, "mvpMat"), 1, GL_FALSE, glm::value_ptr(RenderVars::_MVP));
-		/*glUniform4f(glGetUniformLocation(program, "object_color"), colorObj[0], colorObj[1], colorObj[2], colorObj[3]);
-		glUniform4f(glGetUniformLocation(program, "light_color"), ligth_color[0], ligth_color[1], ligth_color[2], ligth_color[3]);
-		glUniform4f(glGetUniformLocation(program, "camera_position"), RV::panv[0], RV::panv[1], RV::panv[2], 1.f);
-		glUniform4f(glGetUniformLocation(program, "light_position"), Object::prueba[0], Object::prueba[1], Object::prueba[2], 1);
-		glUniform1f(glGetUniformLocation(program, "ambient_light"), Object::ambientStrength*0.001);
-		glUniform1f(glGetUniformLocation(program, "diffuse_light"), Object::diffuseStrength*0.001);
-		glUniform1f(glGetUniformLocation(program, "specular_light"), Object::specularStrength*0.01);*/
 		
-
-		//esteifesopcional
-
 		
 			glBindTexture(GL_TEXTURE_2D, tex);
 		
@@ -861,13 +906,18 @@ void drawObjects(float dt) {
 	glm::mat4 rotacion = glm::mat4(1.f);
 	glm::mat4 escalado = glm::mat4(1.f);
 
+	Object::BindVaoAndProgramCar();
+	Object::CarUniformsAndTexture();
+	for (int i = 0; i < count; i++) {
 
-	rotacion = glm::rotate(glm::mat4(1.f), angulo, glm::vec3(0, 1.f, 0));
-	traslacion = glm::translate(glm::mat4(1.f), movimiento);
-	escalado = glm::scale(glm::mat4(1.f), glm::vec3(0.3f, 0.3f, 0.3f));
-	Object::updateObject(traslacion * rotacion * escalado);
-	Object::drawObject();
 
+		objmats[i] = glm::translate(glm::mat4(1.f), glm::vec3(movimiento.x, movimiento.y + i - 0.2f, movimiento.z));
+
+		
+	}
+	Object::updateObject(objmats,0,objmats.size());
+	Object::drawObject(count);
+	Object::UnbindVaoAndProgramCar();
 
 	//suelo
 	rotacion = glm::mat4(1.f);
@@ -935,10 +985,24 @@ void GLinit(int width, int height) {
 
 	// Setup shaders & geometry
 	
-	
+	objmats.reserve(count);
+
+	for (int i = 0; i < count; i++) {
+		
+
+		glm::mat4 objmat = glm::translate(glm::mat4(1.f), glm::vec3(i, i, i));
+		
+		objmats.push_back(objmat);
+	}
+
+	Object::setupObject(objmats);
+
 	Axis::setupAxis();
 	Cube::setupCube();
-	Object::setupObject();
+
+
+
+
 	Retrovisor::setupRetrovisor();
 	setupFBO();
 
