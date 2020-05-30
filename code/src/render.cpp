@@ -406,6 +406,7 @@ extern bool loadOBJ(const char* path,
 
 class BezierCurve {
 private:
+	float rangoBezier = 50;
 	std::vector<glm::vec3> points;
 	glm::vec3 p0 = glm::vec3(0, 0, 0);
 	glm::vec3 p1 = glm::vec3(4, 0, -10);
@@ -456,11 +457,11 @@ public:
 
 	BezierCurve() {
 
-		p0 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);
-		p1 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);
-		p2 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);
-		p3 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);
-		p4 = glm::vec3((float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f, (float)(std::rand() % 21) - 10.f);
+		p0 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % 21) - 10.f);
+		p1 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % 21) - 10.f);
+		p2 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % 21) - 10.f);
+		p3 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % 21) - 10.f);
+		p4 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % 21) - 10.f);
 
 		points.push_back(p0);
 		points.push_back(p1);
