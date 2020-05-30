@@ -19,7 +19,7 @@
 
 
 std::vector<glm::mat4> objmats;
-GLuint count = 100;
+GLuint count = 10;
 
 
 ///////// fw decl
@@ -470,12 +470,12 @@ public:
 	}
 
 };
-BezierCurve car_path;
+BezierCurve *car_paths;
 float t = 0;
 float ourDt = 0.01f;
-glm::vec3 movimiento;
-glm::vec3 direccion;
-float angulo;
+glm::vec3 *movimiento;
+glm::vec3 *direccion;
+float *angulo;
 
 
 namespace Object {
@@ -830,8 +830,8 @@ namespace Retrovisor {
 
 	void drawRetrovisor(GLuint  tex = NULL) { //el objeto 
 
-		glm::mat4 rotacion = glm::rotate(glm::mat4(1.f), angulo + glm::pi<float>() , glm::vec3(0,1.f,0));//CAMBIOS
-		glm::mat4 traslacion = glm::translate(glm::mat4(1.f), movimiento + glm::vec3(0,0.72f,0));
+		glm::mat4 rotacion = glm::rotate(glm::mat4(1.f), angulo[0] + glm::pi<float>() , glm::vec3(0,1.f,0));//CAMBIOS
+		glm::mat4 traslacion = glm::translate(glm::mat4(1.f), movimiento[0] + glm::vec3(0,0.72f,0));
 		glm::mat4 escalado = glm::scale(glm::mat4(1.f), glm::vec3(0.2f, 0.45f, 0.2f));
 		Retrovisor::updateRetrovisor(traslacion * rotacion * escalado);
 
@@ -910,10 +910,10 @@ void drawObjects(float dt) {
 	Object::CarUniformsAndTexture();
 	for (int i = 0; i < count; i++) {
 
-
-		objmats[i] = glm::translate(glm::mat4(1.f), glm::vec3(movimiento.x, movimiento.y + i - 0.2f, movimiento.z));
-
-		
+		objmats[i] = glm::mat4(1.f);
+		objmats[i] = glm::translate(objmats[i], glm::vec3(movimiento[i].x, movimiento[i].y, movimiento[i].z));
+		objmats[i] = glm::rotate(objmats[i], angulo[i], glm::vec3(0,1.f,0));
+		objmats[i] = glm::scale(objmats[i], glm::vec3(0.1f,0.1f,0.1f));
 	}
 	Object::updateObject(objmats,0,objmats.size());
 	Object::drawObject(count);
@@ -949,8 +949,8 @@ void drawRetrovisorFBOTexture(float dt) {
 	glEnable(GL_CULL_FACE);
 
 	RV::_modelView = glm::mat4(1.f);//CAMBIOS
-	RV::_modelView = glm::rotate(RV::_modelView, -angulo /*+ glm::pi<float>()*/, glm::vec3(0.f, 1.f, 0.f));
-	RV::_modelView = glm::translate(RV::_modelView, (movimiento + glm::vec3(0, 1.f, 0))*(-1.f));
+	RV::_modelView = glm::rotate(RV::_modelView, -angulo[0] /*+ glm::pi<float>()*/, glm::vec3(0.f, 1.f, 0.f));
+	RV::_modelView = glm::translate(RV::_modelView, (movimiento[0] + glm::vec3(0, 1.f, 0))*(-1.f));
 	//RV::_modelView = glm::translate(glm::mat4(1.f), glm::vec3(0, 0,-6)); //sklghjisloghrislohgsilogsgl
 
 	RV::_MVP = glm::perspective(RV::FOV,(float)1500/(float)1000, RV::zNear, RV::zFar) *RV::_modelView;
@@ -971,7 +971,14 @@ void drawRetrovisorFBOTexture(float dt) {
 
 void GLinit(int width, int height) {
 	std::srand(time(NULL));
-	car_path = BezierCurve();
+
+	car_paths = new BezierCurve[count];
+	movimiento = new glm::vec3[count];
+	direccion = new glm::vec3[count];
+	angulo = new float[count];
+
+
+
 	glViewport(0, 0, width, height);
 	RV::width = width;
 	RV::height = height;
@@ -1039,25 +1046,27 @@ void GLrender(float dt) {
 
 
 	if (t <= 1) {
-		movimiento = glm::vec3(car_path.getX(t), 0, car_path.getZ(t));
-		if (t + dt <= 1) {
-			glm::vec3 movimientoDt = glm::vec3(car_path.getX(t + dt), 0, car_path.getZ(t + dt));
-			direccion = movimientoDt - movimiento;
-			angulo = glm::atan(direccion.x / direccion.z);
-			if (angulo < 0) {
-				if(direccion.x > 0)
-					angulo += glm::pi<float>();
-				
-			}
-			else if (angulo > 0) {
-				if (direccion.x < 0)
-					angulo += glm::pi<float>();
+
+		for (int k = 0; k < count; k++) {
+			movimiento[k] = glm::vec3(car_paths[k].getX(t), 0, car_paths[k].getZ(t));
+			if (t + dt <= 1) {
+				glm::vec3 movimientoDt = glm::vec3(car_paths[k].getX(t + dt), 0, car_paths[k].getZ(t + dt));
+				direccion[k] = movimientoDt - movimiento[k];
+				angulo[k] = glm::atan(direccion[k].x / direccion[k].z);
+				if (angulo[k] < 0) {
+					if (direccion[k].x > 0)
+						angulo[k] += glm::pi<float>();
+
+				}
+				else if (angulo[k] > 0) {
+					if (direccion[k].x < 0)
+						angulo[k] += glm::pi<float>();
+
+				}
 
 			}
-			
+			movimiento[k] += glm::vec3(0, 0.3f, 0);
 		}
-		movimiento += glm::vec3(0, 0.3f, 0);
-
 	}
 	else {
 		t = 0;
@@ -1077,24 +1086,24 @@ void GLrender(float dt) {
 	else {
 		
 		RV::_modelView = glm::mat4(1.f);
-		RV::_modelView = glm::rotate(RV::_modelView, -angulo + glm::pi<float>() , glm::vec3(0.f, 1.f, 0.f));
-		RV::_modelView = glm::translate(RV::_modelView, (movimiento - glm::normalize(direccion) + glm::vec3(0,0.8f,0))*(-1.f));
+		RV::_modelView = glm::rotate(RV::_modelView, -angulo[0] + glm::pi<float>() , glm::vec3(0.f, 1.f, 0.f));
+		RV::_modelView = glm::translate(RV::_modelView, (movimiento[0] - glm::normalize(direccion[0]) + glm::vec3(0,0.8f,0))*(-1.f));
 		
 		
 	}
 	RV::_MVP = RV::_projection * RV::_modelView;
 
-	std::cout << "Position :" << movimiento.x << " " << movimiento.y << " " << movimiento.z << std::endl; //CAMBIOS
-	std::cout << "Direction : " << direccion.x << " " << direccion.y << " " << direccion.z << std::endl; //CAMBIOS
-	std::cout << "Angulo: " << angulo << std::endl; //CAMBIOS
-	std::cout << "---------------------------" << std::endl;
+	//std::cout << "Position :" << movimiento.x << " " << movimiento.y << " " << movimiento.z << std::endl; //CAMBIOS
+	//std::cout << "Direction : " << direccion.x << " " << direccion.y << " " << direccion.z << std::endl; //CAMBIOS
+	//std::cout << "Angulo: " << angulo << std::endl; //CAMBIOS
+	//std::cout << "---------------------------" << std::endl;
 
 	drawRetrovisorFBOTexture(dt);
 	drawObjects(dt);
 
 	for (float i = 0; i <= 1; i += ourDt) {
-		glm::vec3 mov = glm::vec3(car_path.getX(i), 0, car_path.getZ(i));
-		glm::vec3 movDt = glm::vec3(car_path.getX(i + dt), 0, car_path.getZ(i + dt));
+		glm::vec3 mov = glm::vec3(car_paths[0].getX(i), 0, car_paths[0].getZ(i));
+		glm::vec3 movDt = glm::vec3(car_paths[0].getX(i + dt), 0, car_paths[0].getZ(i + dt));
 		glm::vec3 vector_t_dt = movDt - mov;
 		float ang = glm::atan(vector_t_dt.x / vector_t_dt.z);
 
