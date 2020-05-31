@@ -457,11 +457,11 @@ public:
 
 	BezierCurve() {
 
-		p0 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % 21) - 10.f);
-		p1 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % 21) - 10.f);
-		p2 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % 21) - 10.f);
-		p3 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % 21) - 10.f);
-		p4 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % 21) - 10.f);
+		p0 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f));
+		p1 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f));
+		p2 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f));
+		p3 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f));
+		p4 = glm::vec3((float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f), (float)(std::rand() % (int)(rangoBezier + 1.f)) - (rangoBezier / 2.f));
 
 		points.push_back(p0);
 		points.push_back(p1);
@@ -477,6 +477,7 @@ float ourDt = 0.01f;
 glm::vec3 *movimiento;
 glm::vec3 *direccion;
 float *angulo;
+glm::vec3 *offset;
 
 
 namespace Object {
@@ -911,10 +912,14 @@ void drawObjects(float dt) {
 	Object::CarUniformsAndTexture();
 	for (int i = 0; i < count; i++) {
 
+		
 		objmats[i] = glm::mat4(1.f);
-		objmats[i] = glm::translate(objmats[i], glm::vec3(movimiento[i].x, movimiento[i].y, movimiento[i].z));
+		if(i!=0)
+			objmats[i] = glm::translate(objmats[i], glm::vec3(movimiento[i].x + offset[i].x, movimiento[i].y, movimiento[i].z + offset[i].z));
+		else
+			objmats[i] = glm::translate(objmats[i], glm::vec3(movimiento[i].x, movimiento[i].y, movimiento[i].z));
 		objmats[i] = glm::rotate(objmats[i], angulo[i], glm::vec3(0,1.f,0));
-		objmats[i] = glm::scale(objmats[i], glm::vec3(0.1f,0.1f,0.1f));
+		objmats[i] = glm::scale(objmats[i], glm::vec3(0.3f,0.3f,0.3f));
 	}
 	Object::updateObject(objmats,0,objmats.size());
 	Object::drawObject(count);
@@ -923,16 +928,16 @@ void drawObjects(float dt) {
 	//suelo
 	rotacion = glm::mat4(1.f);
 	traslacion = glm::translate(glm::mat4(1.f), glm::vec3(0, 0, 0));
-	escalado = glm::scale(glm::mat4(1.f), glm::vec3(50.f, 0.2f, 50.f));
+	escalado = glm::scale(glm::mat4(1.f), glm::vec3(100.f, 0.2f, 100.f));
 	Cube::updateCube(traslacion * rotacion * escalado);
 	Cube::drawCube();
 
 	//pared
-	rotacion = glm::mat4(1.f);
+	/*rotacion = glm::mat4(1.f);
 	traslacion = glm::translate(glm::mat4(1.f), glm::vec3(0, 0, 15));
 	escalado = glm::scale(glm::mat4(1.f), glm::vec3(50.f, 50.f, 1.f));
 	Cube::updateCube(traslacion * rotacion * escalado);
-	Cube::drawCube();
+	Cube::drawCube();*/
 	
 
 
@@ -977,7 +982,11 @@ void GLinit(int width, int height) {
 	movimiento = new glm::vec3[count];
 	direccion = new glm::vec3[count];
 	angulo = new float[count];
+	offset = new glm::vec3[count];
 
+	for (int i = 0; i < count; i++) {
+		offset[i] = glm::vec3((float)(std::rand() % 10) - 4.f, (float)(std::rand() % 10) - 4.f, (float)(std::rand() % 10) - 4.f);
+	}
 
 
 	glViewport(0, 0, width, height);
